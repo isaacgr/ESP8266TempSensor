@@ -17,9 +17,12 @@
 SSD1306 display(0x3c, 4, 5);
 DHT dht(DHTPIN, DHTTYPE);
 WiFiClient client;
+
 bool POST = false;
-int counter = 0;
-int id = 1;
+int TIMER_COUNTER = 0;
+int POST_PERIOD = 600; // frequency to post, in seconds
+
+int id = 1; // jsonrpc starting message id
 
 int displayTempHumid(float temp, float humidity, float temp_f)
 {
@@ -52,27 +55,21 @@ int postTemperature(float temp, float humidity, float temp_f)
 
   char JSONmessageBuffer[300];
   serializeJson(doc, JSONmessageBuffer);
-  // Serial.println(JSONmessageBuffer);
 
   String credentials = CREDENTIALS;
   String encodedCredentials = base64::encode(credentials);
-
-  // Serial.println(encodedCredentials);
 
   std::unique_ptr<BearSSL::WiFiClientSecure> client(new BearSSL::WiFiClientSecure);
   client->setInsecure();
   HTTPClient http; //Declare object of class HTTPClient
 
-  http.begin(*client, URL);                           //Specify request destination
-  http.addHeader("Content-Type", "application/json"); //Specify content-type header
-  http.addHeader("Authorization", "Basic " + encodedCredentials);
-  int httpCode = http.POST(JSONmessageBuffer); //Send the request
-  String payload = http.getString();           //Get the response payload
-  http.end();                                  //Close connection
+  http.begin(*client, URL);                                       //Specify request destination
+  http.addHeader("Content-Type", "application/json");             //Specify content-type header
+  http.addHeader("Authorization", "Basic " + encodedCredentials); // basic auth
+  int httpCode = http.POST(JSONmessageBuffer);                    //Send the request
+  String payload = http.getString();                              //Get the response payload
+  http.end();                                                     //Close connection
 
-  // Serial.println("Code:");
-
-  // Serial.println("Response:");
   Serial.println(payload); //Print request response payload
   return httpCode;
 }
@@ -80,18 +77,18 @@ int postTemperature(float temp, float humidity, float temp_f)
 void IRAM_ATTR timer1_ISR(void)
 {
   // Do some work
-  counter++;
-  if (counter == 600) // update every 10 mins
+  TIMER_COUNTER++;
+  if (TIMER_COUNTER == 600) // update every 10 mins
   {
     POST = true;
-    counter = 0;
+    TIMER_COUNTER = 0;
   }
 }
 
 void setup()
 {
   Serial.begin(115200);
-  WiFi.begin(SSID, WIFI_PASS); //WiFi connection
+  WiFi.begin(SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED)
   {
     Serial.println("Waiting for connection");
