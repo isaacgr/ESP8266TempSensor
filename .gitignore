@@ -2,4 +2,4 @@
 .pioenvs
 .piolibdeps
 .vscode/
-lib/env/env.h
+include/secrets.h
